@@ -2,6 +2,8 @@ import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { LLMStatus, LLMProgress } from '../interfaces/models';
 
+export type InferenceDevice = 'webgpu' | 'wasm' | null;
+
 @Injectable({ providedIn: 'root' })
 export class LlmService implements OnDestroy {
 
@@ -15,6 +17,7 @@ export class LlmService implements OnDestroy {
   readonly token$    = this.tokenSubject.asObservable();
   readonly done$     = this.doneSubject.asObservable();
   readonly error$    = this.errorSubject.asObservable();
+  readonly device$   = new BehaviorSubject<InferenceDevice>(null);
 
   private loadedModelId: string | null = null;
 
@@ -47,6 +50,7 @@ export class LlmService implements OnDestroy {
     switch (data.type) {
       case 'MODEL_LOADED':
         this.loadedModelId = data.modelId;
+        this.device$.next((data.device as InferenceDevice) ?? null);
         this.progress$.next(null);
         this.status$.next('ready');
         break;
@@ -68,10 +72,11 @@ export class LlmService implements OnDestroy {
     }
   }
 
-  loadModel(modelId: string): void {
+  loadModel(modelId: string, dtype = 'q4'): void {
     this.status$.next('loading');
     this.progress$.next(null);
-    this.worker.postMessage({ type: 'LOAD_MODEL', modelId });
+    this.device$.next(null);
+    this.worker.postMessage({ type: 'LOAD_MODEL', modelId, dtype });
   }
 
   generate(
@@ -88,6 +93,15 @@ export class LlmService implements OnDestroy {
     this.worker.postMessage({ type: 'UNLOAD' });
     this.loadedModelId = null;
     this.status$.next('idle');
+  }
+
+  cancelLoad(): void {
+    this.worker.terminate();
+    this.loadedModelId = null;
+    this.progress$.next(null);
+    this.device$.next(null);
+    this.status$.next('idle');
+    this.initWorker();
   }
 
   ngOnDestroy(): void {

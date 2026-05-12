@@ -39,7 +39,7 @@
       <ion-item lines="none">
         <ion-button
           *ngIf="!model.isCached && !model.isLoading"
-          (click)="downloadAndLoad(model.id)"
+          (click)="downloadAndLoad(model.id, model.dtype)"
           fill="solid" color="primary" size="small"
           [attr.aria-label]="'Download ' + model.name">
           <ion-icon slot="start" name="cloud-download-outline" aria-hidden="true"></ion-icon>
@@ -48,7 +48,7 @@
 
         <ion-button
           *ngIf="model.isCached && !model.isLoaded && !model.isLoading"
-          (click)="loadModel(model.id)"
+          (click)="loadModel(model.id, model.dtype)"
           fill="solid" color="success" size="small"
           [attr.aria-label]="'Load ' + model.name">
           <ion-icon slot="start" name="play-circle-outline" aria-hidden="true"></ion-icon>
@@ -68,7 +68,16 @@
           *ngIf="model.isLoading"
           fill="clear" color="medium" size="small" disabled>
           <ion-spinner name="crescent" aria-label="Downloading"></ion-spinner>
-          &nbsp;Loading…
+          &nbsp;Downloading…
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isLoading"
+          fill="outline" color="danger" size="small"
+          (click)="cancelDownload(model.id)"
+          [attr.aria-label]="'Cancel download of ' + model.name">
+          <ion-icon slot="start" name="close-circle-outline" aria-hidden="true"></ion-icon>
+          Cancel
         </ion-button>
 
         <ion-button

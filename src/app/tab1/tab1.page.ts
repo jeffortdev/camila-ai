@@ -35,6 +35,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   status: LLMStatus = 'idle';
   progressLabel = '';
   progressValue = 0;
+  device: string | null = null;
 
   private subs = new Subscription();
 
@@ -51,16 +52,16 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   ionViewWillEnter(): void {
     this.titleService.setTitle('Chat — CamilaAI');
-    // Auto-load model if one is set but not yet loaded
-    const s = this.settings.snapshot;
-    if (this.status === 'idle' && s.modelId) {
-      this.llm.loadModel(s.modelId);
-    }
   }
 
   ngOnInit(): void {
     this.subs.add(this.llm.status$.subscribe(s => {
       this.status = s;
+      this.cdr.markForCheck();
+    }));
+
+    this.subs.add(this.llm.device$.subscribe(d => {
+      this.device = d;
       this.cdr.markForCheck();
     }));
 

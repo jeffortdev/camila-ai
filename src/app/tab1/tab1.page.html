@@ -11,6 +11,8 @@
         {{ isLoading ? 'Loading…' : 'Generating…' }}
       </ion-badge>
       <ion-badge *ngIf="isReady" color="success" aria-label="Model ready">Ready</ion-badge>
+      <ion-badge *ngIf="isReady && device === 'webgpu'" color="tertiary" aria-label="Running on GPU">GPU</ion-badge>
+      <ion-badge *ngIf="isReady && device === 'wasm'" color="medium" aria-label="Running on CPU">CPU</ion-badge>
       <ion-badge *ngIf="noModel" color="medium" aria-label="No model">No model</ion-badge>
     </ion-buttons>
   </ion-toolbar>

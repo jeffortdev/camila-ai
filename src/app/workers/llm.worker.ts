@@ -5,15 +5,31 @@ import { pipeline, TextStreamer, env } from '@huggingface/transformers';
 env.allowLocalModels = false;
 env.allowRemoteModels = true;
 
+// Use all available CPU cores for WASM (capped at 4 to avoid diminishing returns)
+env.backends.onnx.wasm.numThreads = Math.min((navigator as Navigator).hardwareConcurrency ?? 2, 4);
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pipe: any = null;
 let currentModelId: string | null = null;
 
-interface LoadModelMsg   { type: 'LOAD_MODEL';  modelId: string; }
+interface LoadModelMsg   { type: 'LOAD_MODEL';  modelId: string; dtype: string; }
 interface GenerateMsg    { type: 'GENERATE';    messages: Array<{ role: string; content: string }>; temperature: number; maxNewTokens: number; topP: number; }
 interface UnloadMsg      { type: 'UNLOAD'; }
 
 type InMessage = LoadModelMsg | GenerateMsg | UnloadMsg;
+
+/** Map a dtype to the best equivalent for a given execution device. */
+function resolveDeviceDtype(dtype: string, device: 'webgpu' | 'wasm'): string {
+  if (device === 'webgpu') {
+    // GPU prefers fp16 activations; map q4→q4f16, fp32→fp16
+    if (dtype === 'q4')   return 'q4f16';
+    if (dtype === 'fp32') return 'fp16';
+    return dtype;
+  }
+  // WASM: fp16 is not well-supported, fall back to q4
+  if (dtype === 'fp16' || dtype === 'q4f16') return 'q4';
+  return dtype;
+}
 
 self.onmessage = async (event: MessageEvent<InMessage>) => {
   const { data } = event;
@@ -29,6 +45,11 @@ self.onmessage = async (event: MessageEvent<InMessage>) => {
         // Release previous model
         pipe = null;
         currentModelId = null;
+
+        // Determine starting device: prefer WebGPU when the browser supports it
+        const hasWebGPU = 'gpu' in navigator;
+        let device: 'webgpu' | 'wasm' = hasWebGPU ? 'webgpu' : 'wasm';
+        let gpuFallbackDone = false;
 
         const MAX_RETRIES = 10;
         const BASE_DELAY_MS = 2000;
@@ -49,20 +70,37 @@ self.onmessage = async (event: MessageEvent<InMessage>) => {
             await new Promise(resolve => setTimeout(resolve, delay));
           }
 
+          const effectiveDtype = resolveDeviceDtype(data.dtype, device);
+
           try {
             pipe = await pipeline('text-generation', data.modelId, {
-              dtype: 'q4',
+              dtype: effectiveDtype,
+              device,
               progress_callback: (progress: unknown) => {
                 self.postMessage({ type: 'PROGRESS', ...(progress as object) });
               },
             });
 
             currentModelId = data.modelId;
-            self.postMessage({ type: 'MODEL_LOADED', modelId: data.modelId });
+            self.postMessage({ type: 'MODEL_LOADED', modelId: data.modelId, device });
             lastErr = null;
             break; // success
           } catch (err: unknown) {
             lastErr = err;
+
+            // If WebGPU failed and we haven't fallen back yet, switch to WASM and retry immediately
+            if (!gpuFallbackDone && device === 'webgpu') {
+              gpuFallbackDone = true;
+              device = 'wasm';
+              self.postMessage({
+                type: 'PROGRESS',
+                status: 'info',
+                name: 'GPU not available for this model — switching to CPU…',
+              });
+              attempt--; // don't count as a network retry
+              continue;
+            }
+
             const isNetworkError = err instanceof Error && (
               err.message.includes('fetch') ||
               err.message.includes('network') ||

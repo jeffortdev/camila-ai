@@ -9,7 +9,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   cloudDownloadOutline, playCircleOutline, stopCircleOutline,
-  trashOutline
+  trashOutline, closeCircleOutline
 } from 'ionicons/icons';
 import { Observable, Subscription } from 'rxjs';
 import { LlmService } from '../services/llm.service';
@@ -40,7 +40,7 @@ export class Tab2Page implements OnInit, OnDestroy {
     private toast: ToastController,
     private titleService: Title
   ) {
-    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline });
+    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline });
   }
 
   ionViewWillEnter(): void {
@@ -70,14 +70,14 @@ export class Tab2Page implements OnInit, OnDestroy {
     }));
   }
 
-  downloadAndLoad(modelId: string): void {
+  downloadAndLoad(modelId: string, dtype: string): void {
     this.settings.save({ modelId });
-    this.llm.loadModel(modelId);
+    this.llm.loadModel(modelId, dtype);
   }
 
-  loadModel(modelId: string): void {
+  loadModel(modelId: string, dtype: string): void {
     this.settings.save({ modelId });
-    this.llm.loadModel(modelId);
+    this.llm.loadModel(modelId, dtype);
   }
 
   unloadModel(): void {
@@ -85,6 +85,11 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.catalog.models$.next(
       this.catalog.models$.value.map(m => ({ ...m, isLoaded: false }))
     );
+  }
+
+  cancelDownload(modelId: string): void {
+    this.llm.cancelLoad();
+    this.catalog.markIdle(modelId);
   }
 
   async removeFromCache(modelId: string): Promise<void> {

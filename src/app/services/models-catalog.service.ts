@@ -6,10 +6,36 @@ import { HFModel, ManagedModel } from '../interfaces/models';
 const CACHED_KEY = 'camila_cached_models';
 
 export const AVAILABLE_MODELS: HFModel[] = [
+  // ── Fast / WebGPU-first ────────────────────────────────────────────────────
+  {
+    id: 'onnx-community/SmolLM2-135M-Instruct',
+    name: 'SmolLM2 135M Instruct',
+    description: 'Ultra-tiny 135M instruction model. Blazing fast even on CPU.',
+    sizeLabel: '~90 MB (q4)',
+    dtype: 'q4',
+    tags: ['chat', 'tiny', 'fast'],
+  },
+  {
+    id: 'onnx-community/SmolLM2-360M-Instruct',
+    name: 'SmolLM2 360M Instruct',
+    description: 'Small 360M instruction model. Good speed/quality on-device.',
+    sizeLabel: '~230 MB (q4)',
+    dtype: 'q4',
+    tags: ['chat', 'small', 'fast'],
+  },
+  {
+    id: 'onnx-community/Qwen2.5-0.5B-Instruct',
+    name: 'Qwen 2.5 0.5B Instruct',
+    description: 'Alibaba Qwen 0.5B — fast, multilingual, solid quality for its size.',
+    sizeLabel: '~350 MB (q4)',
+    dtype: 'q4',
+    tags: ['chat', 'multilingual', 'fast'],
+  },
+  // ── Larger / higher quality ────────────────────────────────────────────────
   {
     id: 'Xenova/TinyLlama-1.1B-Chat-v1.0',
     name: 'TinyLlama 1.1B Chat',
-    description: 'Compact 1.1B chat model. Great for on-device POC. Supports chat template.',
+    description: 'Compact 1.1B chat model. Good quality for on-device use.',
     sizeLabel: '~670 MB (q4)',
     dtype: 'q4',
     tags: ['chat', 'small'],
@@ -26,8 +52,8 @@ export const AVAILABLE_MODELS: HFModel[] = [
     id: 'Xenova/gpt2',
     name: 'GPT-2 (117M)',
     description: 'Classic GPT-2 base — very fast, minimal quality. Good for testing inference.',
-    sizeLabel: '~130 MB (fp32)',
-    dtype: 'fp32',
+    sizeLabel: '~130 MB (q4)',
+    dtype: 'q4',
     tags: ['text-generation', 'tiny'],
   },
   {
@@ -103,5 +129,15 @@ export class ModelsCatalogService {
     this.cachedIds.delete(modelId);
     await Preferences.set({ key: CACHED_KEY, value: JSON.stringify([...this.cachedIds]) });
     this.emit();
+  }
+
+  markIdle(modelId: string): void {
+    this.models$.next(
+      this.models$.value.map(m =>
+        m.id === modelId
+          ? { ...m, isLoading: false, downloadProgress: 0 }
+          : m
+      )
+    );
   }
 }
