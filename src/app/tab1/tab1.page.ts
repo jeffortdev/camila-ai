@@ -66,8 +66,13 @@ export class Tab1Page implements OnInit, OnDestroy {
 
     this.subs.add(this.llm.progress$.subscribe(p => {
       if (p) {
-        this.progressLabel = p.file ? `Loading ${p.file}…` : p.status;
-        this.progressValue = (p.progress ?? 0) / 100;
+        if (p.status === 'retrying') {
+          this.progressLabel = p.name ?? 'Network interrupted – retrying…';
+          this.progressValue = 0;
+        } else {
+          this.progressLabel = p.file ? `Loading ${p.file}…` : (p.name ?? p.status);
+          this.progressValue = (p.progress ?? 0) / 100;
+        }
       } else {
         this.progressLabel = '';
         this.progressValue = 0;

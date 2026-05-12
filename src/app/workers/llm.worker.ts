@@ -30,15 +30,57 @@ self.onmessage = async (event: MessageEvent<InMessage>) => {
         pipe = null;
         currentModelId = null;
 
-        pipe = await pipeline('text-generation', data.modelId, {
-          dtype: 'q4',
-          progress_callback: (progress: unknown) => {
-            self.postMessage({ type: 'PROGRESS', ...(progress as object) });
-          },
-        });
+        const MAX_RETRIES = 10;
+        const BASE_DELAY_MS = 2000;
+        let lastErr: unknown;
 
-        currentModelId = data.modelId;
-        self.postMessage({ type: 'MODEL_LOADED', modelId: data.modelId });
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          if (attempt > 0) {
+            // Exponential backoff: 2s, 4s, 8s … capped at 60s
+            const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attempt - 1), 60_000);
+            self.postMessage({
+              type: 'PROGRESS',
+              status: 'retrying',
+              attempt,
+              maxRetries: MAX_RETRIES,
+              delayMs: delay,
+              name: `Network interrupted – retrying (${attempt}/${MAX_RETRIES}) in ${delay / 1000}s…`,
+            });
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+
+          try {
+            pipe = await pipeline('text-generation', data.modelId, {
+              dtype: 'q4',
+              progress_callback: (progress: unknown) => {
+                self.postMessage({ type: 'PROGRESS', ...(progress as object) });
+              },
+            });
+
+            currentModelId = data.modelId;
+            self.postMessage({ type: 'MODEL_LOADED', modelId: data.modelId });
+            lastErr = null;
+            break; // success
+          } catch (err: unknown) {
+            lastErr = err;
+            const isNetworkError = err instanceof Error && (
+              err.message.includes('fetch') ||
+              err.message.includes('network') ||
+              err.message.includes('NetworkError') ||
+              err.message.includes('Failed to fetch') ||
+              err.message.includes('Load failed') ||
+              err.message.includes('net::') ||
+              err.name === 'TypeError'
+            );
+            if (!isNetworkError || attempt === MAX_RETRIES) {
+              throw err; // non-network error or retries exhausted
+            }
+          }
+        }
+
+        if (lastErr) {
+          throw lastErr;
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to load model';
         self.postMessage({ type: 'ERROR', message: msg });

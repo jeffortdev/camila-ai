@@ -47,6 +47,10 @@ export interface LLMProgress {
   progress?: number;
   loaded?: number;
   total?: number;
+  // retry metadata
+  attempt?: number;
+  maxRetries?: number;
+  delayMs?: number;
 }
 
 export type WorkerMessageType =
