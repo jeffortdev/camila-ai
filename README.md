@@ -96,9 +96,8 @@ In Xcode select your target device and press **Run** (▶). Requires Xcode 15+ o
 - `ANDROID_HOME` set to your Android SDK path
 - `JAVA_HOME` set to your JDK install
 - `zipalign` and `apksigner` in PATH (or in `$ANDROID_HOME/build-tools/<version>/`)
-- On Windows: [Git for Windows](https://git-scm.com/download/win) installed so `bash` is available in PATH
 
-All build and sign steps are available as **npm scripts** and can be triggered with `npm run`. The scripts call the `bash` versions of the shell scripts, which work natively on macOS/Linux and via Git Bash on Windows.
+All build and sign steps are available as **npm scripts** and can be triggered with `npm run`. On Windows the scripts call the `.ps1` versions via PowerShell; on macOS/Linux they call the `.sh` versions via bash.
 
 ### 1. Generate a keystore (first time only)
 

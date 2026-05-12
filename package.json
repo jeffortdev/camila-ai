@@ -5,15 +5,15 @@
   "homepage": "https://jeffort.com/",
   "scripts": {
     "ng": "ng",
-    "start": "ionic serve",
+    "start": "npx ionic serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "keystore:generate": "bash scripts/generate-keystore.sh",
-    "build:apk": "bash scripts/build-apk.sh",
-    "build:apk:release": "bash scripts/build-apk.sh --release",
-    "build:sign": "bash scripts/build-and-sign.sh"
+    "keystore:generate": "powershell -ExecutionPolicy Bypass -File scripts\\generate-keystore.ps1",
+    "build:apk": "powershell -ExecutionPolicy Bypass -File scripts\\build-apk.ps1",
+    "build:apk:release": "powershell -ExecutionPolicy Bypass -File scripts\\build-apk.ps1 -Release",
+    "build:sign": "powershell -ExecutionPolicy Bypass -File scripts\\build-and-sign.ps1"
   },
   "private": true,
   "dependencies": {
