@@ -1,0 +1,101 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Settings</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()" aria-label="Save settings">
+        <ion-icon slot="icon-only" name="save-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-list>
+
+    <!-- Model Selection -->
+    <ion-list-header>
+      <ion-label>Default Model</ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-label>Model</ion-label>
+      <ion-select
+        [(ngModel)]="form.modelId"
+        interface="action-sheet"
+        placeholder="Select model"
+        aria-label="Select default model">
+        <ion-select-option *ngFor="let m of models" [value]="m.id">
+          {{ m.name }} ({{ m.sizeLabel }})
+        </ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <!-- System Prompt -->
+    <ion-list-header>
+      <ion-label>System Prompt</ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-textarea
+        [(ngModel)]="form.systemPrompt"
+        rows="4"
+        autoGrow="false"
+        placeholder="You are a helpful assistant…"
+        aria-label="System prompt"
+        label="System Prompt"
+        labelPlacement="stacked">
+      </ion-textarea>
+    </ion-item>
+
+    <!-- Temperature -->
+    <ion-list-header>
+      <ion-label>Generation</ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-label>Temperature: {{ form.temperature | number:'1.1-2' }}</ion-label>
+      <ion-range
+        [(ngModel)]="form.temperature"
+        [min]="0" [max]="2" [step]="0.05"
+        color="primary"
+        slot="end"
+        aria-label="Temperature">
+      </ion-range>
+      <ion-note slot="helper">0 = deterministic, 2 = very creative</ion-note>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Max Tokens: {{ form.maxNewTokens }}</ion-label>
+      <ion-range
+        [(ngModel)]="form.maxNewTokens"
+        [min]="64" [max]="2048" [step]="64"
+        color="primary"
+        slot="end"
+        aria-label="Max new tokens">
+      </ion-range>
+      <ion-note slot="helper">Maximum tokens generated per response</ion-note>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Top-P: {{ form.topP | number:'1.2-2' }}</ion-label>
+      <ion-range
+        [(ngModel)]="form.topP"
+        [min]="0.1" [max]="1" [step]="0.05"
+        color="primary"
+        slot="end"
+        aria-label="Top-P sampling">
+      </ion-range>
+      <ion-note slot="helper">Nucleus sampling threshold</ion-note>
+    </ion-item>
+
+  </ion-list>
+
+  <!-- Reset -->
+  <div class="action-row">
+    <ion-button expand="block" fill="outline" color="danger" (click)="reset()">
+      <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
+      Reset to Defaults
+    </ion-button>
+  </div>
+
+</ion-content>

@@ -1,0 +1,99 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>CamilaAI</ion-title>
+    <ion-buttons slot="start">
+      <ion-button (click)="newChat()" aria-label="New chat">
+        <ion-icon slot="icon-only" name="add-circle-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-badge *ngIf="isLoading || isGenerating" color="warning" aria-live="polite">
+        {{ isLoading ? 'Loading…' : 'Generating…' }}
+      </ion-badge>
+      <ion-badge *ngIf="isReady" color="success" aria-label="Model ready">Ready</ion-badge>
+      <ion-badge *ngIf="noModel" color="medium" aria-label="No model">No model</ion-badge>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Loading progress bar -->
+  <ion-progress-bar
+    *ngIf="isLoading"
+    [value]="progressValue"
+    color="warning"
+    aria-label="Model loading progress">
+  </ion-progress-bar>
+</ion-header>
+
+<ion-content [fullscreen]="true" [scrollY]="false">
+
+  <!-- No model loaded state -->
+  <div *ngIf="noModel" class="empty-state" role="main">
+    <ion-icon name="cog-outline" class="empty-icon" aria-hidden="true"></ion-icon>
+    <h2>No model loaded</h2>
+    <p>Go to the <strong>Models</strong> tab to download and load a local LLM.</p>
+    <ion-button (click)="goToModels()" expand="block" color="primary">
+      Open Models
+    </ion-button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="empty-state" role="status" aria-live="polite">
+    <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
+    <p class="progress-label">{{ progressLabel || 'Loading model…' }}</p>
+  </div>
+
+  <!-- Message list -->
+  <div
+    *ngIf="!noModel && !isLoading"
+    class="message-list"
+    #messageList
+    role="log"
+    aria-label="Chat messages"
+    aria-live="polite">
+
+    <div *ngIf="messages.length === 0" class="empty-chat">
+      <p>Send a message to start chatting.</p>
+    </div>
+
+    <div
+      *ngFor="let msg of messages"
+      [class]="'msg-row msg-' + msg.role">
+      <ion-card class="msg-card">
+        <ion-card-content>
+          <span class="msg-role">{{ msg.role === 'user' ? 'You' : 'Camila' }}</span>
+          <p class="msg-content" [attr.aria-label]="(msg.role === 'user' ? 'You: ' : 'Camila: ') + msg.content">
+            {{ msg.content }}
+            <ion-spinner *ngIf="msg.role === 'assistant' && msg.content === '' && isGenerating"
+              name="dots" class="inline-spinner" aria-label="Generating response">
+            </ion-spinner>
+          </p>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+</ion-content>
+
+<ion-footer *ngIf="!noModel && !isLoading">
+  <ion-toolbar>
+    <ion-textarea
+      [(ngModel)]="inputText"
+      placeholder="Message Camila…"
+      [disabled]="!isReady"
+      rows="1"
+      autoGrow="true"
+      aria-label="Message input"
+      (keydown.enter)="onEnter($event)"
+      class="chat-input">
+    </ion-textarea>
+    <ion-buttons slot="end">
+      <ion-button
+        (click)="send()"
+        [disabled]="!isReady || !inputText.trim()"
+        color="primary"
+        aria-label="Send message">
+        <ion-icon slot="icon-only" name="send" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>

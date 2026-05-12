@@ -1,0 +1,15 @@
+ion-list-header ion-label {
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ion-color-primary);
+}
+
+ion-range {
+  max-width: 55%;
+}
+
+.action-row {
+  padding: 1.5rem 1rem 2rem;
+}

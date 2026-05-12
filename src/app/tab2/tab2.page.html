@@ -1,0 +1,86 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-title>Models</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+
+  <ion-list lines="full">
+    <ion-item-group *ngFor="let model of models$ | async">
+      <ion-item>
+        <ion-label>
+          <h2>{{ model.name }}</h2>
+          <p>{{ model.description }}</p>
+          <p class="size-label">{{ model.sizeLabel }}</p>
+        </ion-label>
+      </ion-item>
+
+      <!-- Download progress -->
+      <ion-item *ngIf="model.isLoading" lines="none" class="progress-item">
+        <ion-progress-bar
+          [value]="model.downloadProgress / 100"
+          color="primary"
+          [attr.aria-label]="'Download progress for ' + model.name">
+        </ion-progress-bar>
+        <ion-label slot="end" class="progress-pct">{{ model.downloadProgress | number:'1.0-0' }}%</ion-label>
+      </ion-item>
+
+      <!-- Tags -->
+      <ion-item lines="none" class="tag-row">
+        <div class="tags">
+          <ion-badge *ngFor="let tag of model.tags" color="tertiary">{{ tag }}</ion-badge>
+          <ion-badge *ngIf="model.isCached" color="success">cached</ion-badge>
+          <ion-badge *ngIf="model.isLoaded" color="primary">loaded</ion-badge>
+        </div>
+      </ion-item>
+
+      <!-- Action buttons -->
+      <ion-item lines="none">
+        <ion-button
+          *ngIf="!model.isCached && !model.isLoading"
+          (click)="downloadAndLoad(model.id)"
+          fill="solid" color="primary" size="small"
+          [attr.aria-label]="'Download ' + model.name">
+          <ion-icon slot="start" name="cloud-download-outline" aria-hidden="true"></ion-icon>
+          Download & Load
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isCached && !model.isLoaded && !model.isLoading"
+          (click)="loadModel(model.id)"
+          fill="solid" color="success" size="small"
+          [attr.aria-label]="'Load ' + model.name">
+          <ion-icon slot="start" name="play-circle-outline" aria-hidden="true"></ion-icon>
+          Load
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isLoaded"
+          fill="outline" color="warning" size="small"
+          (click)="unloadModel()"
+          [attr.aria-label]="'Unload ' + model.name">
+          <ion-icon slot="start" name="stop-circle-outline" aria-hidden="true"></ion-icon>
+          Unload
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isLoading"
+          fill="clear" color="medium" size="small" disabled>
+          <ion-spinner name="crescent" aria-label="Downloading"></ion-spinner>
+          &nbsp;Loading…
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isCached"
+          fill="clear" color="danger" size="small"
+          (click)="removeFromCache(model.id)"
+          [attr.aria-label]="'Remove ' + model.name + ' from cache'">
+          <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+    </ion-item-group>
+  </ion-list>
+
+</ion-content>
