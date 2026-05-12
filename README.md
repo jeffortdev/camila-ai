@@ -93,11 +93,9 @@ In Xcode select your target device and press **Run** (▶). Requires Xcode 15+ o
 
 ### Prerequisites
 
+- Android Studio installed with the Android SDK
 - `ANDROID_HOME` set to your Android SDK path
-- `JAVA_HOME` set to your JDK install
-- `zipalign` and `apksigner` in PATH (or in `$ANDROID_HOME/build-tools/<version>/`)
-
-All build and sign steps are available as **npm scripts** and can be triggered with `npm run`. On Windows the scripts call the `.ps1` versions via PowerShell; on macOS/Linux they call the `.sh` versions via bash.
+- `JAVA_HOME` set to your JDK install (JDK 17+)
 
 ### 1. Generate a keystore (first time only)
 
@@ -105,100 +103,38 @@ All build and sign steps are available as **npm scripts** and can be triggered w
 npm run keystore:generate
 ```
 
-<details><summary>Run directly instead</summary>
+This runs `keytool` interactively — you will be prompted for passwords and distinguished name. Store the generated `.keystore` file securely and never commit it.
 
-**Windows (PowerShell):**
-```powershell
-.\scripts\generate-keystore.ps1 `
-  -KeystorePath camila-ai-release.keystore `
-  -Alias camila-ai
-```
-
-**macOS / Linux:**
-```bash
-chmod +x scripts/*.sh
-./scripts/generate-keystore.sh camila-ai-release.keystore camila-ai
-```
-</details>
-
-### 2. Configure signing credentials
-
-```bash
-cp scripts/.env.example scripts/.env
-```
-
-Edit `scripts/.env` — never commit this file:
-```
-KEYSTORE_PATH=./camila-ai-release.keystore
-KEY_ALIAS=camila-ai
-STORE_PASSWORD=your-keystore-password
-KEY_PASSWORD=your-key-password
-```
-
-### 3. Debug APK (no signing needed)
+### 2. Debug APK
 
 ```bash
 npm run build:apk
 ```
 
+Runs: `ionic build --prod` → `cap sync android` → `cap build android`
+
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-<details><summary>Run directly instead</summary>
-
-**Windows:** `.\ scripts\build-apk.ps1`  
-**macOS / Linux:** `./scripts/build-apk.sh`
-</details>
-
-### 4. Release APK (unsigned)
-
-```bash
-npm run build:apk:release
-```
-
-Output: `android/app/build/outputs/apk/release/app-release-unsigned.apk`
-
-<details><summary>Run directly instead</summary>
-
-**Windows:** `.\scripts\build-apk.ps1 -Release`  
-**macOS / Linux:** `./scripts/build-apk.sh --release`
-</details>
-
-### 5. Sign the release APK
-
-`sign-apk.sh` takes explicit arguments. Call it directly:
-
-```bash
-bash scripts/sign-apk.sh \
-  android/app/build/outputs/apk/release/app-release-unsigned.apk \
-  camila-ai-release.keystore camila-ai \
-  your-store-pass your-key-pass
-```
-
-**Windows (PowerShell):**
-```powershell
-.\scripts\sign-apk.ps1 `
-  -UnsignedApk "android\app\build\outputs\apk\release\app-release-unsigned.apk" `
-  -KeystorePath camila-ai-release.keystore `
-  -Alias camila-ai `
-  -StorePassword "your-pass" `
-  -KeyPassword "your-pass"
-```
-
-### 6. Full pipeline (build + sign in one command)
-
-Requires `scripts/.env` to be configured (step 2).
+### 3. Signed release APK
 
 ```bash
 npm run build:sign
 ```
 
-Output: `android/app/build/outputs/apk/release/camila-ai-release-signed.apk`
+Runs: `ionic build --prod` → `cap sync android` → `cap build android` with keystore flags.
 
-<details><summary>Run directly instead</summary>
+You will be prompted for your keystore and key passwords by Capacitor. Output: `android/app/build/outputs/apk/release/`
 
-**Windows:** `.\scripts\build-and-sign.ps1`  
-**macOS / Linux:** `./scripts/build-and-sign.sh`
-</details>
+Alternatively, pass passwords inline (avoid on shared machines):
+
+```bash
+npx cap build android \
+  --keystorepath camila-ai-release.keystore \
+  --keystorealias camila-ai \
+  --keystorepassword your-store-pass \
+  --keystorealiaspassword your-key-pass \
+  --androidreleasetype APK
+```
 
 ---
 
@@ -214,13 +150,6 @@ src/app/
   workers/     — LLM Web Worker (llm.worker.ts)
   services/    — LlmService, ChatService, SettingsService, ModelsCatalogService
   interfaces/  — TypeScript interfaces & types
-
-scripts/
-  generate-keystore.{ps1,sh}   — Create signing keystore  (npm run keystore:generate)
-  build-apk.{ps1,sh}           — Build debug or release APK (npm run build:apk / build:apk:release)
-  sign-apk.{ps1,sh}            — Zipalign + sign APK
-  build-and-sign.{ps1,sh}      — Full pipeline             (npm run build:sign)
-  .env.example                 — Template for signing credentials
 ```
 
 ---
