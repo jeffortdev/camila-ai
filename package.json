@@ -11,7 +11,11 @@
     "test": "ng test",
     "lint": "ng lint",
     "keystore:generate": "keytool -genkeypair -v -keystore camila-ai-release.keystore -alias camila-ai -keyalg RSA -keysize 2048 -validity 10000",
-    "build:apk": "npx ionic build --prod && npx cap sync android && npx cap build android",
+    "cap:add:android": "npx cap add android",
+    "cap:build:android": "ng build && npx cap sync android",
+    "cap:open:android": "npx cap open android",
+    "cap:apk:debug": "npm run cap:build:android && cd android && gradlew assembleDebug",
+    "cap:apk:release": "npm run cap:build:android && cd android && gradlew assembleRelease",
     "build:sign": "npx ionic build --prod && npx cap sync android && npx cap build android --keystorepath camila-ai-release.keystore --keystorealias camila-ai --androidreleasetype APK"
   },
   "private": true,
