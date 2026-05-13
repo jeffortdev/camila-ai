@@ -6,6 +6,17 @@
 
 <ion-content [fullscreen]="true">
 
+  <!-- HF token not configured hint -->
+  <ion-item *ngIf="!hfToken" lines="none" color="warning" class="token-hint">
+    <ion-icon slot="start" name="key-outline" aria-hidden="true"></ion-icon>
+    <ion-label class="ion-text-wrap">
+      <p>No Hugging Face token set. Gated models will fail to download.</p>
+    </ion-label>
+    <ion-button slot="end" fill="clear" size="small" (click)="openSettings()" aria-label="Open Settings to add token">
+      Add Token
+    </ion-button>
+  </ion-item>
+
   <ion-list lines="full">
     <ion-item-group *ngFor="let model of models$ | async">
       <ion-item>

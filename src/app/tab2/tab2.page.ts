@@ -1,15 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonList,
   IonItem, IonLabel, IonButton, IonIcon, IonBadge,
-  IonProgressBar, IonSpinner, IonItemGroup, ToastController
+  IonProgressBar, IonSpinner, IonItemGroup,
+  ToastController, AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   cloudDownloadOutline, playCircleOutline, stopCircleOutline,
-  trashOutline, closeCircleOutline
+  trashOutline, closeCircleOutline, keyOutline
 } from 'ionicons/icons';
 import { Observable, Subscription } from 'rxjs';
 import { LlmService } from '../services/llm.service';
@@ -31,6 +33,7 @@ import { ManagedModel } from '../interfaces/models';
 export class Tab2Page implements OnInit, OnDestroy {
 
   models$!: Observable<ManagedModel[]>;
+  hfToken = '';
   private subs = new Subscription();
 
   constructor(
@@ -38,9 +41,11 @@ export class Tab2Page implements OnInit, OnDestroy {
     private llm: LlmService,
     private settings: SettingsService,
     private toast: ToastController,
+    private alert: AlertController,
+    private router: Router,
     private titleService: Title
   ) {
-    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline });
+    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline, keyOutline });
   }
 
   ionViewWillEnter(): void {
@@ -49,6 +54,10 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.models$ = this.catalog.models$;
+
+    this.subs.add(this.settings.settings$.subscribe(s => {
+      this.hfToken = s.hfToken ?? '';
+    }));
 
     // Reflect LLM loading progress into catalog
     this.subs.add(this.llm.progress$.subscribe(p => {
@@ -65,9 +74,29 @@ export class Tab2Page implements OnInit, OnDestroy {
     }));
 
     this.subs.add(this.llm.error$.subscribe(async msg => {
-      const t = await this.toast.create({ message: msg, duration: 3000, color: 'danger', position: 'bottom' });
-      await t.present();
+      const isAuthError = /authentication|authorization|401|403|unauthorized|forbidden|gated/i.test(msg);
+      if (isAuthError) {
+        const a = await this.alert.create({
+          header: 'Authentication Required',
+          message: 'This model requires a Hugging Face access token. Add your token in Settings to download gated models.',
+          buttons: [
+            { text: 'Dismiss', role: 'cancel' },
+            {
+              text: 'Open Settings',
+              handler: () => { this.openSettings(); }
+            }
+          ]
+        });
+        await a.present();
+      } else {
+        const t = await this.toast.create({ message: msg, duration: 3000, color: 'danger', position: 'bottom' });
+        await t.present();
+      }
     }));
+  }
+
+  openSettings(): void {
+    this.router.navigateByUrl('/tabs/tab4');
   }
 
   downloadAndLoad(modelId: string, dtype: string): void {
