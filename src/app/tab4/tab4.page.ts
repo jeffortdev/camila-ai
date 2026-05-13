@@ -6,7 +6,7 @@ import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonList,
   IonItem, IonLabel, IonTextarea, IonRange,
   IonNote, IonButton, IonIcon, IonListHeader, IonSelect,
-  IonSelectOption, IonButtons, ToastController, AlertController
+  IonSelectOption, IonButtons, IonInput, ToastController, AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { refreshOutline, saveOutline } from 'ionicons/icons';
@@ -24,7 +24,7 @@ import { AVAILABLE_MODELS } from '../services/models-catalog.service';
     IonHeader, IonToolbar, IonTitle, IonContent, IonList,
     IonItem, IonLabel, IonTextarea, IonRange,
     IonNote, IonButton, IonIcon, IonListHeader, IonSelect,
-    IonSelectOption, IonButtons
+    IonSelectOption, IonButtons, IonInput
   ],
 })
 export class Tab4Page implements OnInit, OnDestroy {
@@ -37,6 +37,7 @@ export class Tab4Page implements OnInit, OnDestroy {
     temperature: 0.7,
     maxNewTokens: 256,
     topP: 0.9,
+    hfToken: '',
   };
 
   private subs = new Subscription();

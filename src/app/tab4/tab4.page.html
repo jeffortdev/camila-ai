@@ -88,6 +88,24 @@
       <ion-note slot="helper">Nucleus sampling threshold</ion-note>
     </ion-item>
 
+    <!-- Hugging Face Token -->
+    <ion-list-header>
+      <ion-label>Hugging Face Access Token</ion-label>
+    </ion-list-header>
+
+    <ion-item>
+      <ion-input
+        [(ngModel)]="form.hfToken"
+        type="password"
+        placeholder="hf_…"
+        autocomplete="off"
+        aria-label="Hugging Face access token"
+        label="HF Token"
+        labelPlacement="stacked">
+      </ion-input>
+      <ion-note slot="helper">Required for gated / private models. Leave blank for public models.</ion-note>
+    </ion-item>
+
   </ion-list>
 
   <!-- Reset -->

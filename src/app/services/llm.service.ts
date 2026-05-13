@@ -1,6 +1,7 @@
 import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { LLMStatus, LLMProgress } from '../interfaces/models';
+import { SettingsService } from './settings.service';
 
 export type InferenceDevice = 'webgpu' | 'wasm' | null;
 
@@ -21,7 +22,7 @@ export class LlmService implements OnDestroy {
 
   private loadedModelId: string | null = null;
 
-  constructor(private zone: NgZone) {
+  constructor(private zone: NgZone, private settingsService: SettingsService) {
     this.initWorker();
   }
 
@@ -76,7 +77,8 @@ export class LlmService implements OnDestroy {
     this.status$.next('loading');
     this.progress$.next(null);
     this.device$.next(null);
-    this.worker.postMessage({ type: 'LOAD_MODEL', modelId, dtype });
+    const hfToken = this.settingsService.snapshot.hfToken ?? '';
+    this.worker.postMessage({ type: 'LOAD_MODEL', modelId, dtype, hfToken });
   }
 
   generate(

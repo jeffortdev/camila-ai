@@ -12,7 +12,7 @@ env.backends.onnx.wasm.numThreads = Math.min((navigator as Navigator).hardwareCo
 let pipe: any = null;
 let currentModelId: string | null = null;
 
-interface LoadModelMsg   { type: 'LOAD_MODEL';  modelId: string; dtype: string; }
+interface LoadModelMsg   { type: 'LOAD_MODEL';  modelId: string; dtype: string; hfToken?: string; }
 interface GenerateMsg    { type: 'GENERATE';    messages: Array<{ role: string; content: string }>; temperature: number; maxNewTokens: number; topP: number; }
 interface UnloadMsg      { type: 'UNLOAD'; }
 
@@ -45,6 +45,9 @@ self.onmessage = async (event: MessageEvent<InMessage>) => {
         // Release previous model
         pipe = null;
         currentModelId = null;
+
+        // Configure HF access token (required for gated/private models)
+        env.accessToken = data.hfToken || null;
 
         // Determine starting device: prefer WebGPU when the browser supports it
         const hasWebGPU = 'gpu' in navigator;
@@ -99,6 +102,21 @@ self.onmessage = async (event: MessageEvent<InMessage>) => {
               });
               attempt--; // don't count as a network retry
               continue;
+            }
+
+            const isAuthError = err instanceof Error && (
+              err.message.includes('401') ||
+              err.message.includes('403') ||
+              err.message.includes('Unauthorized') ||
+              err.message.includes('Forbidden') ||
+              err.message.toLowerCase().includes('authentication') ||
+              err.message.toLowerCase().includes('authorization')
+            );
+            if (isAuthError) {
+              throw new Error(
+                `Authentication required for model "${data.modelId}". ` +
+                `Add a Hugging Face token in Settings to access gated models.`
+              );
             }
 
             const isNetworkError = err instanceof Error && (

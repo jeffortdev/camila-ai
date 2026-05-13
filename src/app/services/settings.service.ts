@@ -11,6 +11,7 @@ const DEFAULTS: LLMSettings = {
   temperature: 0.7,
   maxNewTokens: 256,
   topP: 0.9,
+  hfToken: '',
 };
 
 @Injectable({ providedIn: 'root' })

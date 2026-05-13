@@ -36,6 +36,7 @@ export interface LLMSettings {
   temperature: number;
   maxNewTokens: number;
   topP: number;
+  hfToken: string;
 }
 
 export type LLMStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
