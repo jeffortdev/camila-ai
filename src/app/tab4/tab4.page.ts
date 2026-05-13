@@ -61,7 +61,7 @@ export class Tab4Page implements OnInit, OnDestroy {
   }
 
   async save(): Promise<void> {
-    await this.settingsService.save({ ...this.form });
+    await this.settingsService.save({ ...this.form, hfToken: this.form.hfToken?.trim() ?? '' });
     const t = await this.toast.create({
       message: 'Settings saved',
       duration: 1500,

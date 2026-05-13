@@ -39,6 +39,21 @@ export interface LLMSettings {
   hfToken: string;
 }
 
+export interface LocalGgufModel {
+  /** Unique key used to identify the model in the UI (e.g. the file name). */
+  id: string;
+  /** Display name shown to the user. */
+  name: string;
+  /** Original File object selected by the user. */
+  file: File;
+  /** Whether this model is currently loaded in wllama. */
+  isLoaded: boolean;
+  /** Whether loading is in progress. */
+  isLoading: boolean;
+  /** 0-100 loading progress. */
+  loadProgress: number;
+}
+
 export type LLMStatus = 'idle' | 'loading' | 'ready' | 'generating' | 'error';
 
 export interface LLMProgress {

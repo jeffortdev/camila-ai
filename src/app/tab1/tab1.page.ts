@@ -12,6 +12,7 @@ import { addIcons } from 'ionicons';
 import { send, addCircleOutline, cogOutline, stopCircleOutline } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
 import { LlmService } from '../services/llm.service';
+import { GgufService } from '../services/gguf.service';
 import { ChatService } from '../services/chat.service';
 import { SettingsService } from '../services/settings.service';
 import { ChatMessage, LLMStatus } from '../interfaces/models';
@@ -41,6 +42,7 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   constructor(
     public llm: LlmService,
+    public gguf: GgufService,
     public chatService: ChatService,
     public settings: SettingsService,
     private router: Router,
@@ -55,9 +57,19 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Mirror status from whichever service is active
     this.subs.add(this.llm.status$.subscribe(s => {
-      this.status = s;
-      this.cdr.markForCheck();
+      if (!this.gguf.loadedModelId) {
+        this.status = s;
+        this.cdr.markForCheck();
+      }
+    }));
+
+    this.subs.add(this.gguf.status$.subscribe(s => {
+      if (this.gguf.loadedModelId || s !== 'idle') {
+        this.status = s;
+        this.cdr.markForCheck();
+      }
     }));
 
     this.subs.add(this.llm.device$.subscribe(d => {
@@ -86,6 +98,11 @@ export class Tab1Page implements OnInit, OnDestroy {
       this.scrollToBottom();
     }));
 
+    this.subs.add(this.gguf.token$.subscribe(token => {
+      this.chatService.appendToLastAssistantMessage(token);
+      this.scrollToBottom();
+    }));
+
     this.subs.add(this.chatService.activeSession$.subscribe(session => {
       this.messages = session?.messages ?? [];
       this.cdr.markForCheck();
@@ -96,7 +113,9 @@ export class Tab1Page implements OnInit, OnDestroy {
   get isReady(): boolean { return this.status === 'ready'; }
   get isLoading(): boolean { return this.status === 'loading'; }
   get isGenerating(): boolean { return this.status === 'generating'; }
-  get noModel(): boolean { return this.status === 'idle' || this.status === 'error'; }
+  get noModel(): boolean {
+    return (this.status === 'idle' || this.status === 'error') && !this.gguf.loadedModelId;
+  }
 
   newChat(): void {
     const s = this.settings.snapshot;
@@ -143,7 +162,11 @@ export class Tab1Page implements OnInit, OnDestroy {
       ...history,
     ];
 
-    this.llm.generate(prompt, s.temperature, s.maxNewTokens, s.topP);
+    if (this.gguf.loadedModelId) {
+      this.gguf.generate(prompt, s.temperature, s.maxNewTokens, s.topP);
+    } else {
+      this.llm.generate(prompt, s.temperature, s.maxNewTokens, s.topP);
+    }
   }
 
   goToModels(): void {

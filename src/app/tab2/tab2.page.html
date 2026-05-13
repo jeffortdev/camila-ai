@@ -17,6 +17,93 @@
     </ion-button>
   </ion-item>
 
+  <!-- ── Local GGUF Models ───────────────────────────────────────────── -->
+  <ion-list-header>
+    <ion-label>Local GGUF Models</ion-label>
+  </ion-list-header>
+
+  <!-- Hidden native file input -->
+  <input
+    #ggufFileInput
+    type="file"
+    accept=".gguf"
+    style="display:none"
+    (change)="onGgufFileSelected($event)"
+    aria-hidden="true">
+
+  <ion-item lines="none">
+    <ion-button fill="outline" color="secondary" size="small" (click)="openGgufPicker()" aria-label="Browse for a local GGUF file">
+      <ion-icon slot="start" name="folder-open-outline" aria-hidden="true"></ion-icon>
+      Browse GGUF file…
+    </ion-button>
+    <ion-label class="ion-text-wrap ion-padding-start">
+      <p class="ion-color-medium">Pick any <code>.gguf</code> file you downloaded manually.</p>
+    </ion-label>
+  </ion-item>
+
+  <ion-list lines="full">
+    <ion-item-group *ngFor="let model of ggufModels$ | async">
+      <ion-item>
+        <ion-label>
+          <h2>{{ model.name }}</h2>
+          <p class="size-label">{{ model.file.name }}</p>
+        </ion-label>
+        <ion-badge *ngIf="model.isLoaded" color="primary" slot="end">loaded</ion-badge>
+      </ion-item>
+
+      <!-- Loading progress -->
+      <ion-item *ngIf="model.isLoading" lines="none" class="progress-item">
+        <ion-progress-bar
+          [value]="model.loadProgress / 100"
+          color="secondary"
+          [attr.aria-label]="'Loading ' + model.name">
+        </ion-progress-bar>
+        <ion-label slot="end" class="progress-pct">{{ model.loadProgress | number:'1.0-0' }}%</ion-label>
+      </ion-item>
+
+      <!-- Action buttons -->
+      <ion-item lines="none">
+        <ion-button
+          *ngIf="!model.isLoaded && !model.isLoading"
+          (click)="loadGgufModel(model.id)"
+          fill="solid" color="secondary" size="small"
+          [attr.aria-label]="'Load ' + model.name">
+          <ion-icon slot="start" name="play-circle-outline" aria-hidden="true"></ion-icon>
+          Load
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isLoading"
+          fill="clear" color="medium" size="small" disabled>
+          <ion-spinner name="crescent" aria-label="Loading"></ion-spinner>
+          &nbsp;Loading…
+        </ion-button>
+
+        <ion-button
+          *ngIf="model.isLoaded"
+          fill="outline" color="warning" size="small"
+          (click)="gguf.unload()"
+          [attr.aria-label]="'Unload ' + model.name">
+          <ion-icon slot="start" name="stop-circle-outline" aria-hidden="true"></ion-icon>
+          Unload
+        </ion-button>
+
+        <ion-button
+          fill="clear" color="danger" size="small"
+          (click)="removeGgufModel(model.id)"
+          [attr.aria-label]="'Remove ' + model.name">
+          <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+    </ion-item-group>
+  </ion-list>
+
+  <!-- ── Remote ONNX Models ─────────────────────────────────────────── -->
+  <ion-list-header>
+    <ion-label>Remote Models (ONNX)</ion-label>
+  </ion-list-header>
+
   <ion-list lines="full">
     <ion-item-group *ngFor="let model of models$ | async">
       <ion-item>

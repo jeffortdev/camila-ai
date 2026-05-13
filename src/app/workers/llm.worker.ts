@@ -46,8 +46,21 @@ self.onmessage = async (event: MessageEvent<InMessage>) => {
         pipe = null;
         currentModelId = null;
 
-        // Configure HF access token (required for gated/private models)
-        env.accessToken = data.hfToken || null;
+        // Inject HF access token into fetch requests.
+        // transformers.js v4 only reads process.env.HF_TOKEN in Node.js —
+        // in browser/web-worker context the else-branch adds no auth headers.
+        // We override env.fetch so every HuggingFace request carries the token.
+        const hfToken = data.hfToken?.trim() ?? '';
+        (env as unknown as Record<string, unknown>)['fetch'] = hfToken
+          ? async (url: string, init?: RequestInit) => {
+              if (url.includes('huggingface.co') || url.includes('hf.co')) {
+                const headers = new Headers(init?.headers);
+                headers.set('Authorization', `Bearer ${hfToken}`);
+                return fetch(url, { ...init, headers });
+              }
+              return fetch(url, init);
+            }
+          : fetch;
 
         // Determine starting device: prefer WebGPU when the browser supports it
         const hasWebGPU = 'gpu' in navigator;

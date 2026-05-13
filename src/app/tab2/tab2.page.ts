@@ -1,23 +1,24 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonList,
   IonItem, IonLabel, IonButton, IonIcon, IonBadge,
-  IonProgressBar, IonSpinner, IonItemGroup,
+  IonProgressBar, IonSpinner, IonItemGroup, IonListHeader,
   ToastController, AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   cloudDownloadOutline, playCircleOutline, stopCircleOutline,
-  trashOutline, closeCircleOutline, keyOutline
+  trashOutline, closeCircleOutline, keyOutline, folderOpenOutline
 } from 'ionicons/icons';
 import { Observable, Subscription } from 'rxjs';
 import { LlmService } from '../services/llm.service';
+import { GgufService } from '../services/gguf.service';
 import { ModelsCatalogService } from '../services/models-catalog.service';
 import { SettingsService } from '../services/settings.service';
-import { ManagedModel } from '../interfaces/models';
+import { LocalGgufModel, ManagedModel } from '../interfaces/models';
 
 @Component({
   selector: 'app-tab2',
@@ -27,25 +28,29 @@ import { ManagedModel } from '../interfaces/models';
     CommonModule, DecimalPipe,
     IonHeader, IonToolbar, IonTitle, IonContent, IonList,
     IonItem, IonLabel, IonButton, IonIcon, IonBadge,
-    IonProgressBar, IonSpinner, IonItemGroup
+    IonProgressBar, IonSpinner, IonItemGroup, IonListHeader
   ],
 })
 export class Tab2Page implements OnInit, OnDestroy {
 
+  @ViewChild('ggufFileInput') ggufFileInputRef!: ElementRef<HTMLInputElement>;
+
   models$!: Observable<ManagedModel[]>;
+  ggufModels$!: Observable<LocalGgufModel[]>;
   hfToken = '';
   private subs = new Subscription();
 
   constructor(
     private catalog: ModelsCatalogService,
     private llm: LlmService,
+    public gguf: GgufService,
     private settings: SettingsService,
     private toast: ToastController,
     private alert: AlertController,
     private router: Router,
     private titleService: Title
   ) {
-    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline, keyOutline });
+    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline, keyOutline, folderOpenOutline });
   }
 
   ionViewWillEnter(): void {
@@ -54,6 +59,7 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.models$ = this.catalog.models$;
+    this.ggufModels$ = this.gguf.models$;
 
     this.subs.add(this.settings.settings$.subscribe(s => {
       this.hfToken = s.hfToken ?? '';
@@ -76,9 +82,12 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.subs.add(this.llm.error$.subscribe(async msg => {
       const isAuthError = /authentication|authorization|401|403|unauthorized|forbidden|gated/i.test(msg);
       if (isAuthError) {
+        const tokenIsSet = !!this.hfToken?.trim();
         const a = await this.alert.create({
           header: 'Authentication Required',
-          message: 'This model requires a Hugging Face access token. Add your token in Settings to download gated models.',
+          message: tokenIsSet
+            ? 'Your Hugging Face token was rejected. It may be expired, invalid, or lack access to this model. Check your token in Settings.'
+            : 'This model requires a Hugging Face access token. Add your token in Settings to download gated models.',
           buttons: [
             { text: 'Dismiss', role: 'cancel' },
             {
@@ -97,6 +106,33 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   openSettings(): void {
     this.router.navigateByUrl('/tabs/tab4');
+  }
+
+  // ── Local GGUF helpers ────────────────────────────────────────────────────
+
+  openGgufPicker(): void {
+    this.ggufFileInputRef.nativeElement.click();
+  }
+
+  onGgufFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) { return; }
+    this.gguf.addModel(file);
+    // Reset so the same file can be picked again if needed
+    input.value = '';
+  }
+
+  async loadGgufModel(id: string): Promise<void> {
+    // Unload any ONNX model first
+    if (this.llm.loadedModel) { this.llm.unloadModel(); }
+    await this.gguf.loadModel(id);
+  }
+
+  async removeGgufModel(id: string): Promise<void> {
+    await this.gguf.removeModel(id);
+    const t = await this.toast.create({ message: 'GGUF model removed', duration: 2000, color: 'medium', position: 'bottom' });
+    await t.present();
   }
 
   downloadAndLoad(modelId: string, dtype: string): void {
