@@ -11,7 +11,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   cloudDownloadOutline, playCircleOutline, stopCircleOutline,
-  trashOutline, closeCircleOutline, keyOutline, folderOpenOutline
+  trashOutline, closeCircleOutline, keyOutline, folderOpenOutline, refreshOutline
 } from 'ionicons/icons';
 import { Observable, Subscription } from 'rxjs';
 import { LlmService } from '../services/llm.service';
@@ -37,6 +37,7 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   models$!: Observable<ManagedModel[]>;
   ggufModels$!: Observable<LocalGgufModel[]>;
+  isCatalogLoading$!: Observable<boolean>;
   hfToken = '';
   private subs = new Subscription();
 
@@ -50,7 +51,7 @@ export class Tab2Page implements OnInit, OnDestroy {
     private router: Router,
     private titleService: Title
   ) {
-    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline, keyOutline, folderOpenOutline });
+    addIcons({ cloudDownloadOutline, playCircleOutline, stopCircleOutline, trashOutline, closeCircleOutline, keyOutline, folderOpenOutline, refreshOutline });
   }
 
   ionViewWillEnter(): void {
@@ -60,6 +61,7 @@ export class Tab2Page implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.models$ = this.catalog.models$;
     this.ggufModels$ = this.gguf.models$;
+    this.isCatalogLoading$ = this.catalog.isCatalogLoading$;
 
     this.subs.add(this.settings.settings$.subscribe(s => {
       this.hfToken = s.hfToken ?? '';
@@ -106,6 +108,10 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   openSettings(): void {
     this.router.navigateByUrl('/tabs/tab4');
+  }
+
+  refreshCatalog(): void {
+    this.catalog.fetchCatalog();
   }
 
   // ── Local GGUF helpers ────────────────────────────────────────────────────

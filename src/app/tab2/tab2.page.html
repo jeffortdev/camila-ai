@@ -102,6 +102,15 @@
   <!-- ── Remote ONNX Models ─────────────────────────────────────────── -->
   <ion-list-header>
     <ion-label>Remote Models (ONNX)</ion-label>
+    <ion-button
+      fill="clear"
+      size="small"
+      (click)="refreshCatalog()"
+      [disabled]="isCatalogLoading$ | async"
+      aria-label="Refresh model catalog">
+      <ion-spinner *ngIf="isCatalogLoading$ | async" name="crescent" slot="icon-only"></ion-spinner>
+      <ion-icon *ngIf="!(isCatalogLoading$ | async)" name="refresh-outline" slot="icon-only" aria-hidden="true"></ion-icon>
+    </ion-button>
   </ion-list-header>
 
   <ion-list lines="full">

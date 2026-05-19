@@ -5,8 +5,43 @@ import { HFModel, ManagedModel } from '../interfaces/models';
 
 const CACHED_KEY = 'camila_cached_models';
 
-export const AVAILABLE_MODELS: HFModel[] = [
-  // ── Fast / WebGPU-first ────────────────────────────────────────────────────
+const HF_API_URL =
+  'https://huggingface.co/api/models' +
+  '?library=transformers.js&pipeline_tag=text-generation&sort=downloads&limit=30';
+
+/** Raw shape returned by the HF Hub REST API for a model listing entry. */
+interface HFApiModel {
+  id: string;
+  tags: string[];
+  downloads?: number;
+}
+
+const SKIP_TAGS = new Set([
+  'transformers', 'onnx', 'safetensors', 'pytorch', 'text-generation',
+  'transformers.js', 'endpoints_compatible', 'region:us', 'has_space',
+  'autotrain_compatible',
+]);
+
+function mapApiModel(m: HFApiModel): HFModel {
+  const namePart = m.id.split('/').pop() ?? m.id;
+  const name = namePart.replace(/[-_]/g, ' ');
+  const sizeMatch = namePart.match(/(\d+(?:\.\d+)?[BbMm])/);
+  const sizeLabel = sizeMatch ? sizeMatch[0].toUpperCase() : '';
+  const dtype: HFModel['dtype'] =
+    m.tags.includes('fp32') ? 'fp32' :
+    m.tags.includes('fp16') ? 'fp16' : 'q4';
+  const tags = m.tags
+    .filter(t => !SKIP_TAGS.has(t) && !t.includes(':') && t.length < 30)
+    .slice(0, 5);
+  const dl = m.downloads ?? 0;
+  const description = dl >= 1_000
+    ? `${(dl / 1_000).toFixed(0)}K downloads`
+    : `${dl} downloads`;
+  return { id: m.id, name, description, sizeLabel, dtype, tags };
+}
+
+/** Fallback list used when the HF API is unreachable. */
+const FALLBACK_MODELS: HFModel[] = [
   {
     id: 'onnx-community/SmolLM2-135M-Instruct',
     name: 'SmolLM2 135M Instruct',
@@ -31,7 +66,6 @@ export const AVAILABLE_MODELS: HFModel[] = [
     dtype: 'q4',
     tags: ['chat', 'multilingual', 'fast'],
   },
-  // ── Larger / higher quality ────────────────────────────────────────────────
   {
     id: 'Xenova/TinyLlama-1.1B-Chat-v1.0',
     name: 'TinyLlama 1.1B Chat',
@@ -70,10 +104,18 @@ export const AVAILABLE_MODELS: HFModel[] = [
 export class ModelsCatalogService {
 
   private cachedIds = new Set<string>();
+  private availableModels: HFModel[] = [...FALLBACK_MODELS];
+
   readonly models$ = new BehaviorSubject<ManagedModel[]>([]);
+  readonly isCatalogLoading$ = new BehaviorSubject<boolean>(false);
 
   constructor() {
-    this.loadCachedState();
+    this.init();
+  }
+
+  private async init(): Promise<void> {
+    await this.loadCachedState();
+    await this.fetchCatalog();
   }
 
   private async loadCachedState(): Promise<void> {
@@ -87,15 +129,37 @@ export class ModelsCatalogService {
     this.emit();
   }
 
+  /** Fetch the list of compatible models from the HF Hub API.
+   *  Falls back silently to the built-in list on any network error. */
+  async fetchCatalog(): Promise<void> {
+    this.isCatalogLoading$.next(true);
+    try {
+      const res = await fetch(HF_API_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as HFApiModel[];
+      if (Array.isArray(data) && data.length > 0) {
+        this.availableModels = data.map(mapApiModel);
+        this.emit();
+      }
+    } catch { /* keep fallback list already emitted */ }
+    finally {
+      this.isCatalogLoading$.next(false);
+    }
+  }
+
   private emit(): void {
+    const current = this.models$.value;
     this.models$.next(
-      AVAILABLE_MODELS.map(m => ({
-        ...m,
-        isCached: this.cachedIds.has(m.id),
-        isLoaded: false,
-        isLoading: false,
-        downloadProgress: 0,
-      }))
+      this.availableModels.map(m => {
+        const prev = current.find(c => c.id === m.id);
+        return {
+          ...m,
+          isCached: this.cachedIds.has(m.id),
+          isLoaded: prev?.isLoaded ?? false,
+          isLoading: prev?.isLoading ?? false,
+          downloadProgress: prev?.downloadProgress ?? 0,
+        };
+      })
     );
   }
 

@@ -12,8 +12,8 @@ import { addIcons } from 'ionicons';
 import { refreshOutline, saveOutline } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
 import { SettingsService } from '../services/settings.service';
-import { LLMSettings } from '../interfaces/models';
-import { AVAILABLE_MODELS } from '../services/models-catalog.service';
+import { ModelsCatalogService } from '../services/models-catalog.service';
+import { LLMSettings, ManagedModel } from '../interfaces/models';
 
 @Component({
   selector: 'app-tab4',
@@ -29,7 +29,7 @@ import { AVAILABLE_MODELS } from '../services/models-catalog.service';
 })
 export class Tab4Page implements OnInit, OnDestroy {
 
-  models = AVAILABLE_MODELS;
+  models: ManagedModel[] = [];
 
   form: LLMSettings = {
     modelId: '',
@@ -44,6 +44,7 @@ export class Tab4Page implements OnInit, OnDestroy {
 
   constructor(
     private settingsService: SettingsService,
+    private catalog: ModelsCatalogService,
     private toast: ToastController,
     private alert: AlertController,
     private titleService: Title
@@ -57,6 +58,9 @@ export class Tab4Page implements OnInit, OnDestroy {
       this.settingsService.settings$.subscribe(s => {
         this.form = { ...s };
       })
+    );
+    this.subs.add(
+      this.catalog.models$.subscribe(m => { this.models = m; })
     );
   }
 

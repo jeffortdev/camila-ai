@@ -13,12 +13,14 @@ import { trashOutline, trash, chatbubblesOutline } from 'ionicons/icons';
 import { Observable } from 'rxjs';
 import { ChatService } from '../services/chat.service';
 import { ChatSession } from '../interfaces/models';
-import { AVAILABLE_MODELS } from '../services/models-catalog.service';
+import { ModelsCatalogService } from '../services/models-catalog.service';
 
 @Pipe({ name: 'modelName', standalone: true })
 export class ModelNamePipe implements PipeTransform {
+  constructor(private catalog: ModelsCatalogService) {}
+
   transform(modelId: string): string {
-    return AVAILABLE_MODELS.find(m => m.id === modelId)?.name ?? modelId;
+    return this.catalog.models$.value.find(m => m.id === modelId)?.name ?? modelId;
   }
 }
 
